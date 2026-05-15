@@ -3339,6 +3339,47 @@ body.dark .portal-card:hover { border-color: rgba(201,169,110,0.3); }
       </details>
     </div>
 
+    <!-- VENUE PHOTO -->
+    <div class="panel-section">
+      <details class="adv-section">
+        <summary class="adv-summary">Venue Photo</summary>
+        <div class="adv-body" style="padding-top:8px">
+          <p style="font-size:11px;color:#94a3b8;margin-bottom:10px;line-height:1.5">Upload an aerial photo of your venue to trace table positions accurately.</p>
+          <label style="display:block;width:100%;padding:8px;background:#f8fafc;border:1.5px dashed #c9a96e;border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:#a07840;font-weight:600;transition:background 0.15s" onmouseover="this.style.background='#fdf8ef'" onmouseout="this.style.background='#f8fafc'">
+            📷 Upload Photo
+            <input type="file" accept="image/*" style="display:none" onchange="uploadBgImage(event)">
+          </label>
+          <div id="bg-controls" style="display:none;margin-top:10px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <span style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em">Opacity</span>
+              <span id="opacity-val" style="font-size:11px;color:#94a3b8">40%</span>
+            </div>
+            <input id="bg-opacity-slider" type="range" min="5" max="100" value="40" style="width:100%;margin-bottom:10px;accent-color:#c9a96e" oninput="setBgOpacity(this.value)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <span style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em">Scale</span>
+              <span id="bg-scale-val" style="font-size:11px;color:#94a3b8">100%</span>
+            </div>
+            <input id="bg-scale-slider" type="range" min="10" max="400" value="100" style="width:100%;margin-bottom:10px;accent-color:#c9a96e" oninput="setBgScale(this.value)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <span style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em">Move X</span>
+              <span id="bg-offx-val" style="font-size:11px;color:#94a3b8">0 px</span>
+            </div>
+            <input id="bg-offx-slider" type="range" min="-500" max="500" value="0" style="width:100%;margin-bottom:10px;accent-color:#c9a96e" oninput="setBgOffX(this.value)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <span style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.05em">Move Y</span>
+              <span id="bg-offy-val" style="font-size:11px;color:#94a3b8">0 px</span>
+            </div>
+            <input id="bg-offy-slider" type="range" min="-500" max="500" value="0" style="width:100%;margin-bottom:10px;accent-color:#c9a96e" oninput="setBgOffY(this.value)">
+            <div style="display:flex;gap:6px">
+              <button onclick="fitPhotoToVenue()" style="flex:1;padding:6px;font-size:11px;font-weight:600;background:#0f1e3d;color:white;border:none;border-radius:6px;cursor:pointer">Fit to Venue</button>
+              <button onclick="resetBgTransform()" style="flex:1;padding:6px;font-size:11px;font-weight:600;background:#f1f5f9;color:#64748b;border:none;border-radius:6px;cursor:pointer">Reset</button>
+              <button onclick="clearBgImage()" style="flex:1;padding:6px;font-size:11px;font-weight:600;background:#fef2f2;color:#ef4444;border:none;border-radius:6px;cursor:pointer">Remove</button>
+            </div>
+          </div>
+        </div>
+      </details>
+    </div>
+
     <!-- TABLE LIST -->
     <div class="panel-section" style="flex:1">
       <h3>Tables</h3>
@@ -3363,11 +3404,7 @@ body.dark .portal-card:hover { border-color: rgba(201,169,110,0.3); }
   <div id="canvas-wrap">
     <div id="mode-bar">Click on the floor to place &mdash; ESC to cancel</div>
     <canvas id="canvas"></canvas>
-    <div id="canvas-hint" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;user-select:none">
-  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="rgba(201,169,110,0.3)" stroke-width="1" stroke-linecap="round" style="margin-bottom:16px"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-  <div style="font-size:16px;font-weight:600;color:rgba(201,169,110,0.45);font-family:'Playfair Display',serif;margin-bottom:6px">Your venue is empty</div>
-  <div style="font-size:12px;color:rgba(255,255,255,0.2);line-height:1.6">Pick a table from the toolbar below<br>then click here to place it</div>
-</div>
+    <div id="canvas-hint" style="display:none"></div>
     <div id="scale-info"></div>
     <div id="zoom-bar">
       <button class="zbtn" onclick="doZoom(1.25)" title="Zoom In">
@@ -3700,21 +3737,15 @@ function snapV(val) {
 //  OVERLAP DETECTION
 // ─────────────────────────────────────────────
 function tableFootprint(t) {
-  // Returns { cx, cy, hw, hh } — center and half-extents (treat round as square AABB)
-  if (t.type === 'round') {
-    const r = t.diam / 2;
-    return { cx: t.x, cy: t.y, hw: r, hh: r };
-  }
+  if (t.type === 'round') { const r = t.diam / 2; return { cx: t.x, cy: t.y, hw: r, hh: r }; }
   return { cx: t.x, cy: t.y, hw: t.rw / 2, hh: t.rl / 2 };
 }
-
 function tablesOverlap(a, b) {
-  const GAP = 0.25; // minimum clearance between tables in venue units (ft)
+  const GAP = 0.25;
   const fa = tableFootprint(a), fb = tableFootprint(b);
   return Math.abs(fa.cx - fb.cx) < (fa.hw + fb.hw + GAP) &&
          Math.abs(fa.cy - fb.cy) < (fa.hh + fb.hh + GAP);
 }
-
 function wouldOverlapAny(candidate, excludeId) {
   return S.tables.some(t => t.id !== excludeId && tablesOverlap(candidate, t));
 }
@@ -5105,11 +5136,7 @@ canvas.addEventListener('mousemove', e => {
         cx = clamp(nx, item.rw / 2, S.venue.w - item.rw / 2);
         cy = clamp(ny, item.rl / 2, S.venue.h - item.rl / 2);
       }
-      const candidate = { ...item, x: cx, y: cy };
-      if (!wouldOverlapAny(candidate, item.id)) {
-        item.x = cx;
-        item.y = cy;
-      }
+      if (!wouldOverlapAny({ ...item, x: cx, y: cy }, item.id)) { item.x = cx; item.y = cy; }
     } else {
       const sc2 = getScale(), { ox: ox2, oy: oy2 } = getOrig();
       item.x = clamp(nx, -ox2 / sc2, (canvas.width  - ox2) / sc2 - item.w);
@@ -5432,20 +5459,16 @@ canvas.addEventListener('touchmove', function(e) {
       const v = cToV(px, py);
       const nx = snapV(v.x - _touchDragOffX);
       const ny = snapV(v.y - _touchDragOffY);
-      let cx, cy;
+      let tcx, tcy;
       if (tbl.type === 'round') {
         const hr = tbl.diam / 2;
-        cx = clamp(nx, hr, S.venue.w - hr);
-        cy = clamp(ny, hr, S.venue.h - hr);
+        tcx = clamp(nx, hr, S.venue.w - hr);
+        tcy = clamp(ny, hr, S.venue.h - hr);
       } else {
-        cx = clamp(nx, tbl.rw / 2, S.venue.w - tbl.rw / 2);
-        cy = clamp(ny, tbl.rl / 2, S.venue.h - tbl.rl / 2);
+        tcx = clamp(nx, tbl.rw / 2, S.venue.w - tbl.rw / 2);
+        tcy = clamp(ny, tbl.rl / 2, S.venue.h - tbl.rl / 2);
       }
-      const candidate = { ...tbl, x: cx, y: cy };
-      if (!wouldOverlapAny(candidate, tbl.id)) {
-        tbl.x = cx;
-        tbl.y = cy;
-      }
+      if (!wouldOverlapAny({ ...tbl, x: tcx, y: tcy }, tbl.id)) { tbl.x = tcx; tbl.y = tcy; }
       redraw();
     }
     return;
@@ -5739,14 +5762,11 @@ function doPlace(v) {
   }
 
   if (S.placing.kind === 'table') {
-    const cfg = S.placing.cfg;
-    const preview = cfg.type === 'round'
-      ? { type: 'round', x: v.x, y: v.y, diam: cfg.diam, id: -1 }
-      : { type: 'rect',  x: v.x, y: v.y, rw: cfg.rw, rl: cfg.rl, id: -1 };
-    if (wouldOverlapAny(preview, -1)) {
-      toast('Tables cannot overlap — try a different spot');
-      return;
-    }
+    const cfg2 = S.placing.cfg;
+    const preview = cfg2.type === 'round'
+      ? { type: 'round', x: v.x, y: v.y, diam: cfg2.diam, id: -1 }
+      : { type: 'rect',  x: v.x, y: v.y, rw: cfg2.rw, rl: cfg2.rl, id: -1 };
+    if (wouldOverlapAny(preview, -1)) { toast('Tables cannot overlap — try a different spot'); return; }
   }
 
   pushHistory();
@@ -7949,6 +7969,8 @@ function _openAppShellFromWizard() {
       requestAnimationFrame(function() { wrap.style.opacity = '1'; });
     }
   });
+  // Save immediately so event name/date/hosts/venue are persisted to cloud
+  saveState();
 }
 
 function goToPortal() {
@@ -8983,6 +9005,11 @@ function wzNext() {
     // Store dimensions directly on S so they're ready when the app shell opens
     S.venue.w = vw;
     S.venue.h = vh;
+    // Update the portal card name to reflect the actual event name entered
+    const _evNameInput = document.getElementById('wz-evname');
+    const _evNameVal = (_evNameInput ? _evNameInput.value.trim() : '') || 'New Event';
+    const _chartIdx = _multiCharts.findIndex(c => c.id === _currentChartId);
+    if (_chartIdx >= 0) _multiCharts[_chartIdx].name = _evNameVal;
     localStorage.setItem('eventseat-setup-done', '1');
     document.getElementById('setup-wizard').style.display = 'none';
     // Open app shell — fit() and redraw() run inside after the shell is visible
