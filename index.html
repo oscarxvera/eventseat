@@ -7896,6 +7896,7 @@ function openChartById(id) {
 
 function newChart() {
   try {
+    // Always show the event setup wizard so users name their event and set venue size
     const id = _genId();
     const chart = { id, name: 'New Event', created: new Date().toISOString(), updated: new Date().toISOString(), chartData: {} };
     _multiCharts.unshift(chart);
@@ -7907,7 +7908,6 @@ function newChart() {
       venueRot: 0, venueShape: null, bgScale: 1, bgOffX: 0, bgOffY: 0,
       conflicts: [],
     });
-    // Reset live mode for new chart
     _liveMode = false;
     const liveBtn = document.getElementById('live-btn');
     const liveLabel = document.getElementById('live-btn-label');
@@ -7915,21 +7915,17 @@ function newChart() {
     if (liveLabel) liveLabel.textContent = 'Go Live';
 
     updateEventInfo(); renderGuests(); renderTableList(); renderProps();
-    // Reset undo history for the new chart
-    S.history = [];
-    S.histIdx = -1;
-    pushHistory();
-    syncUndoButtons();
+    S.history = []; S.histIdx = -1; pushHistory(); syncUndoButtons();
+
+    // Open app shell first
     screenHide(document.getElementById('portal-overlay'));
     const appShell = document.getElementById('app-shell');
     screenShow(appShell, 'flex');
-    localStorage.setItem('eventseat-tour-done', '1'); // never auto-tour after first event creation
     const fabMenu = document.getElementById('mob-fab-menu');
     if (fabMenu) fabMenu.style.display = isMobile() ? 'flex' : 'none';
     requestAnimationFrame(function() { fit(); });
     const hint = document.getElementById('canvas-hint');
     if (hint) hint.style.display = 'block';
-    // Canvas wrap fade-in
     const wrap = document.getElementById('canvas-wrap');
     if (wrap) {
       wrap.style.opacity = '0';
@@ -7938,6 +7934,18 @@ function newChart() {
         requestAnimationFrame(function() { wrap.style.opacity = '1'; });
       });
     }
+
+    // Always show event setup wizard — clear previous wizard state so it starts fresh
+    localStorage.removeItem('eventseat-setup-done');
+    document.getElementById('wz-evname').value = '';
+    document.getElementById('wz-date').value = '';
+    document.getElementById('wz-count').value = '';
+    document.getElementById('wz-hosts').value = '';
+    document.getElementById('wz-vw').value = '';
+    document.getElementById('wz-vh').value = '';
+    _wzStep = 0; wzRender();
+    setTimeout(function() { document.getElementById('setup-wizard').style.display = 'flex'; }, 300);
+
   } catch(e) {
     console.error('newChart error:', e);
     showPortal();
@@ -8597,7 +8605,8 @@ function bypassAuth(isNewAccount = false) {
         _portalUserEmail = document.getElementById('su-email')?.value || document.getElementById('si-email')?.value || '';
         showPortal();
         // New account with no charts yet: start portal tour
-        if (_isNewAccount && !localStorage.getItem('eventseat-portal-tour-done')) {
+        // Only show portal tour to brand-new accounts that have no charts yet
+        if (_isNewAccount && _multiCharts.length === 0 && !localStorage.getItem('eventseat-portal-tour-done')) {
           setTimeout(startPortalTour, 800);
         }
       } else {
@@ -8886,7 +8895,8 @@ _sb.auth.onAuthStateChange(async (event, session) => {
           setTimeout(function() { if (loadingEl) loadingEl.style.display = 'none'; }, 320);
         }
 
-        if (_isNewAccount && !localStorage.getItem('eventseat-portal-tour-done')) {
+        // Only show portal tour to brand-new accounts that have no charts yet
+        if (_isNewAccount && _multiCharts.length === 0 && !localStorage.getItem('eventseat-portal-tour-done')) {
           setTimeout(startPortalTour, 800);
         }
         var emailVerified = !!session.user.email_confirmed_at;
@@ -8982,13 +8992,12 @@ function wzNext() {
   if (_wzStep === 2) {
     localStorage.setItem('eventseat-setup-done', '1');
     document.getElementById('setup-wizard').style.display = 'none';
-    // If portal tour triggered this event creation, start the tool tour
-    const _portalTourWasActive = _activeTourSteps === PORTAL_TOUR_STEPS;
-    if (_portalTourWasActive) {
+    // Start tool tour for any new user who hasn't seen it yet
+    const toolTourSeen = localStorage.getItem('eventseat-tool-tour-done') || localStorage.getItem('eventseat-tour-done');
+    if (!toolTourSeen) {
       localStorage.setItem('eventseat-portal-tour-done', '1');
       setTimeout(function() { startToolTour(); }, 600);
     } else {
-      // Hide tour elements if somehow visible
       const hl2 = document.getElementById('tutorial-highlight');
       const tt2 = document.getElementById('tutorial-tooltip');
       if (hl2) { hl2.style.opacity='0'; hl2.style.display='none'; }
