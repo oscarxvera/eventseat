@@ -8980,17 +8980,18 @@ function wzNext() {
     const vh = parseFloat(document.getElementById('wz-vh').value);
     if (!vw || vw < 10) { toast('Please enter a venue width (minimum 10 ft)'); document.getElementById('wz-vw').focus(); return; }
     if (!vh || vh < 10) { toast('Please enter a venue length (minimum 10 ft)'); document.getElementById('wz-vh').focus(); return; }
-    document.getElementById('venue-w').value = vw;
-    document.getElementById('venue-h').value = vh;
-    onVenueChange();
+    // Store dimensions directly on S so they're ready when the app shell opens
+    S.venue.w = vw;
+    S.venue.h = vh;
     localStorage.setItem('eventseat-setup-done', '1');
     document.getElementById('setup-wizard').style.display = 'none';
+    // Open app shell — fit() and redraw() run inside after the shell is visible
     _openAppShellFromWizard();
     // Start tool tour for new users who haven't seen it
     const toolTourSeen = localStorage.getItem('eventseat-tool-tour-done') || localStorage.getItem('eventseat-tour-done');
     if (!toolTourSeen) {
       localStorage.setItem('eventseat-portal-tour-done', '1');
-      setTimeout(function() { startToolTour(); }, 700);
+      setTimeout(function() { startToolTour(); }, 800);
     }
     return;
   }
