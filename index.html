@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>EventSeat — Wedding Seating Planner</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -3639,6 +3642,9 @@ const ELEM_DEFS = {
   gift:     { label:'Gift Table',   color:'#db2777', w:6,  h:3  },
   cake:     { label:'Cake Table',   color:'#e11d48', w:5,  h:3  },
   coat:     { label:'Coat Check',   color:'#475569', w:8,  h:4  },
+  bathroom: { label:'Restrooms',    color:'#0f766e', w:8,  h:6  },
+  food:     { label:'Food Station', color:'#a16207', w:10, h:4  },
+  kids:     { label:'Kids Area',    color:'#7c3aed', w:10, h:8  },
 };
 
 const TABLE_COLORS = [
@@ -9361,6 +9367,72 @@ setTimeout(function() {
     <input class="csw-num" type="text" id="csw-name" value="" placeholder="e.g. Head Table" title="Optional table name" style="width:90px">
     <button class="csw-place-btn" onclick="placeCustomTable()">Place Table</button>
   </div>
+  <!-- Room Objects -->
+  <div class="bt-group">
+    <span class="bt-label">Objects</span>
+    <button class="bt-preset" onclick="startElem('dance')">
+      <span class="bt-preset-icon">💃</span>
+      <span class="bt-preset-name">Dance Floor</span>
+      <span class="bt-preset-sub">16×12 ft</span>
+    </button>
+    <button class="bt-preset" onclick="startElem('stage')">
+      <span class="bt-preset-icon">🎤</span>
+      <span class="bt-preset-name">Stage</span>
+      <span class="bt-preset-sub">20×10 ft</span>
+    </button>
+    <button class="bt-preset" onclick="startElem('buffet')">
+      <span class="bt-preset-icon">🍽</span>
+      <span class="bt-preset-name">Buffet</span>
+      <span class="bt-preset-sub">14×4 ft</span>
+    </button>
+    <button class="bt-preset" onclick="startElem('bar')">
+      <span class="bt-preset-icon">🍸</span>
+      <span class="bt-preset-name">Bar</span>
+      <span class="bt-preset-sub">12×4 ft</span>
+    </button>
+    <button class="bt-preset" onclick="startElem('dj')">
+      <span class="bt-preset-icon">🎧</span>
+      <span class="bt-preset-name">DJ Booth</span>
+      <span class="bt-preset-sub">8×6 ft</span>
+    </button>
+    <button class="bt-preset" onclick="startElem('bathroom')">
+      <span class="bt-preset-icon">🚻</span>
+      <span class="bt-preset-name">Restrooms</span>
+      <span class="bt-preset-sub">8×6 ft</span>
+    </button>
+    <button class="bt-preset" onclick="startElem('photo')">
+      <span class="bt-preset-icon">📸</span>
+      <span class="bt-preset-name">Photo Booth</span>
+      <span class="bt-preset-sub">6×6 ft</span>
+    </button>
+    <button class="bt-preset" onclick="startElem('cake')">
+      <span class="bt-preset-icon">🎂</span>
+      <span class="bt-preset-name">Cake Table</span>
+      <span class="bt-preset-sub">5×3 ft</span>
+    </button>
+    <button class="bt-preset" onclick="startElem('gift')">
+      <span class="bt-preset-icon">🎁</span>
+      <span class="bt-preset-name">Gift Table</span>
+      <span class="bt-preset-sub">6×3 ft</span>
+    </button>
+    <button class="bt-preset" onclick="startElem('entrance')">
+      <span class="bt-preset-icon">🚪</span>
+      <span class="bt-preset-name">Entrance</span>
+      <span class="bt-preset-sub">8×4 ft</span>
+    </button>
+    <button class="bt-preset" onclick="startElem('food')">
+      <span class="bt-preset-icon">🥘</span>
+      <span class="bt-preset-name">Food Station</span>
+      <span class="bt-preset-sub">10×4 ft</span>
+    </button>
+    <button class="bt-preset" onclick="startElem('coat')">
+      <span class="bt-preset-icon">🧥</span>
+      <span class="bt-preset-name">Coat Check</span>
+      <span class="bt-preset-sub">8×4 ft</span>
+    </button>
+    <button class="bt-custom-btn" onclick="startElem('custom')">+ Custom</button>
+  </div>
+
   <!-- View Controls -->
   <div class="bt-group">
     <span class="bt-label">View</span>
