@@ -7896,7 +7896,7 @@ function openChartById(id) {
 
 function newChart() {
   try {
-    // Always show the event setup wizard so users name their event and set venue size
+    // Prep chart state
     const id = _genId();
     const chart = { id, name: 'New Event', created: new Date().toISOString(), updated: new Date().toISOString(), chartData: {} };
     _multiCharts.unshift(chart);
@@ -7914,42 +7914,41 @@ function newChart() {
     if (liveBtn) liveBtn.classList.remove('live-on');
     if (liveLabel) liveLabel.textContent = 'Go Live';
 
-    updateEventInfo(); renderGuests(); renderTableList(); renderProps();
-    S.history = []; S.histIdx = -1; pushHistory(); syncUndoButtons();
+    // Show wizard over the portal — app shell opens when wizard completes
+    document.getElementById('wz-evname').value = '';
+    document.getElementById('wz-date').value = '';
+    document.getElementById('wz-count').value = '';
+    document.getElementById('wz-hosts').value = '';
+    document.getElementById('wz-vw').value = '60';
+    document.getElementById('wz-vh').value = '40';
+    _wzStep = 0; wzRender();
+    document.getElementById('setup-wizard').style.display = 'flex';
 
-    // Open app shell first
-    screenHide(document.getElementById('portal-overlay'));
-    const appShell = document.getElementById('app-shell');
-    screenShow(appShell, 'flex');
-    const fabMenu = document.getElementById('mob-fab-menu');
-    if (fabMenu) fabMenu.style.display = isMobile() ? 'flex' : 'none';
-    requestAnimationFrame(function() { fit(); });
+  } catch(e) {
+    console.error('newChart error:', e);
+    showPortal();
+  }
+}
+
+function _openAppShellFromWizard() {
+  updateEventInfo(); renderGuests(); renderTableList(); renderProps();
+  S.history = []; S.histIdx = -1; pushHistory(); syncUndoButtons();
+  screenHide(document.getElementById('portal-overlay'));
+  const appShell = document.getElementById('app-shell');
+  screenShow(appShell, 'flex');
+  const fabMenu = document.getElementById('mob-fab-menu');
+  if (fabMenu) fabMenu.style.display = isMobile() ? 'flex' : 'none';
+  requestAnimationFrame(function() {
+    fit();
     const hint = document.getElementById('canvas-hint');
     if (hint) hint.style.display = 'block';
     const wrap = document.getElementById('canvas-wrap');
     if (wrap) {
       wrap.style.opacity = '0';
       wrap.style.transition = 'opacity 0.4s ease';
-      requestAnimationFrame(function() {
-        requestAnimationFrame(function() { wrap.style.opacity = '1'; });
-      });
+      requestAnimationFrame(function() { wrap.style.opacity = '1'; });
     }
-
-    // Always show event setup wizard — clear previous wizard state so it starts fresh
-    localStorage.removeItem('eventseat-setup-done');
-    document.getElementById('wz-evname').value = '';
-    document.getElementById('wz-date').value = '';
-    document.getElementById('wz-count').value = '';
-    document.getElementById('wz-hosts').value = '';
-    document.getElementById('wz-vw').value = '';
-    document.getElementById('wz-vh').value = '';
-    _wzStep = 0; wzRender();
-    setTimeout(function() { document.getElementById('setup-wizard').style.display = 'flex'; }, 300);
-
-  } catch(e) {
-    console.error('newChart error:', e);
-    showPortal();
-  }
+  });
 }
 
 function goToPortal() {
@@ -8979,30 +8978,27 @@ function wzNext() {
   if (_wzStep === 1) {
     const vw = parseFloat(document.getElementById('wz-vw').value);
     const vh = parseFloat(document.getElementById('wz-vh').value);
-    if (vw >= 10) { document.getElementById('venue-w').value = vw; }
-    if (vh >= 10) { document.getElementById('venue-h').value = vh; }
-    if (vw >= 10 || vh >= 10) onVenueChange();
-    // If user has already done the tour, skip the "Start Tour" step entirely
-    if (localStorage.getItem('eventseat-tool-tour-done') || localStorage.getItem('eventseat-tour-done')) {
-      localStorage.setItem('eventseat-setup-done', '1');
-      document.getElementById('setup-wizard').style.display = 'none';
-      return;
-    }
-  }
-  if (_wzStep === 2) {
+    if (!vw || vw < 10) { toast('Please enter a venue width (minimum 10 ft)'); document.getElementById('wz-vw').focus(); return; }
+    if (!vh || vh < 10) { toast('Please enter a venue length (minimum 10 ft)'); document.getElementById('wz-vh').focus(); return; }
+    document.getElementById('venue-w').value = vw;
+    document.getElementById('venue-h').value = vh;
+    onVenueChange();
     localStorage.setItem('eventseat-setup-done', '1');
     document.getElementById('setup-wizard').style.display = 'none';
-    // Start tool tour for any new user who hasn't seen it yet
+    _openAppShellFromWizard();
+    // Start tool tour for new users who haven't seen it
     const toolTourSeen = localStorage.getItem('eventseat-tool-tour-done') || localStorage.getItem('eventseat-tour-done');
     if (!toolTourSeen) {
       localStorage.setItem('eventseat-portal-tour-done', '1');
-      setTimeout(function() { startToolTour(); }, 600);
-    } else {
-      const hl2 = document.getElementById('tutorial-highlight');
-      const tt2 = document.getElementById('tutorial-tooltip');
-      if (hl2) { hl2.style.opacity='0'; hl2.style.display='none'; }
-      if (tt2) { tt2.style.opacity='0'; tt2.style.display='none'; }
+      setTimeout(function() { startToolTour(); }, 700);
     }
+    return;
+  }
+  if (_wzStep === 2) {
+    // Legacy path — shouldn't normally reach here anymore
+    localStorage.setItem('eventseat-setup-done', '1');
+    document.getElementById('setup-wizard').style.display = 'none';
+    _openAppShellFromWizard();
     return;
   }
   _wzStep++;
@@ -9042,7 +9038,7 @@ function wzRender() {
   document.getElementById('wz-sub').textContent   = titles[_wzStep][1];
   document.getElementById('wz-back-btn').style.display = _wzStep > 0 ? 'block' : 'none';
   document.getElementById('wz-next-btn').textContent =
-    _wzStep === 2 ? 'Start Tour →' : _wzStep === 1 ? 'Finish Setup →' : 'Next →';
+    _wzStep === 1 ? 'Create Event →' : 'Next →';
   var skipTourBtn = document.getElementById('wz-skip-tour-btn');
   if (skipTourBtn) skipTourBtn.style.display = 'none';
 }
