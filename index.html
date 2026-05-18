@@ -3644,7 +3644,7 @@ const ELEM_DEFS = {
   coat:     { label:'Coat Check',   color:'#475569', w:8,  h:4  },
   bathroom: { label:'Restrooms',    color:'#0f766e', w:8,  h:6  },
   food:     { label:'Food Station', color:'#a16207', w:10, h:4  },
-  kids:     { label:'Kids Area',    color:'#7c3aed', w:10, h:8  },
+  kids:     { label:'Kids Area',    color:'#2d6a4f', w:10, h:8  },
 };
 
 const TABLE_COLORS = [
@@ -4745,7 +4745,9 @@ function drawTable(t, sc, ox, oy) {
   const cx = ox + t.x * sc;
   const cy = oy + t.y * sc;
   const isSel = S.sel?.kind === 'table' && S.sel?.id === t.id;
-  const color = t.color || TABLE_COLORS[(t.num - 1) % TABLE_COLORS.length];
+  const tGuests = t.guests || [];
+  const tNum = t.num || t.id || 1;
+  const color = t.color || TABLE_COLORS[(tNum - 1) % TABLE_COLORS.length];
 
   ctx.save();
 
@@ -4753,7 +4755,7 @@ function drawTable(t, sc, ox, oy) {
     const r = (t.diam / 2) * sc;
 
     // draw seats first (underneath table disc)
-    drawRoundSeats(cx, cy, r, t.seats, color, t.guests.length);
+    drawRoundSeats(cx, cy, r, t.seats, color, tGuests.length);
 
     // drop shadow
     ctx.save();
@@ -4800,7 +4802,7 @@ function drawTable(t, sc, ox, oy) {
     }
 
     // Capacity color arc (overlays the outer ring)
-    const pct = t.seats > 0 ? t.guests.length / t.seats : 0;
+    const pct = t.seats > 0 ? tGuests.length / t.seats : 0;
     const capColor = pct >= 0.85 ? '#ef4444' : pct >= 0.5 ? '#f59e0b' : '#10b981';
     ctx.beginPath();
     ctx.arc(cx, cy, r - 3, -Math.PI/2, -Math.PI/2 + (Math.PI * 2 * pct));
@@ -4819,7 +4821,7 @@ function drawTable(t, sc, ox, oy) {
         ctx.fillStyle = 'rgba(255,255,255,0.9)';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(t.guests.length + '/' + (t.seats || '?'), cx, cy + 9);
+        ctx.fillText(tGuests.length + '/' + (t.seats || '?'), cx, cy + 9);
       }
     } else {
       ctx.font = 'bold ' + fs + "px 'Inter', Segoe UI";
@@ -4841,7 +4843,7 @@ function drawTable(t, sc, ox, oy) {
     ctx.rotate((t.rot || 0) * Math.PI / 180);
     const w = t.rw * sc, h = t.rl * sc;
 
-    drawRectSeats(-w/2, -h/2, w, h, t.seats, color, t.guests.length);
+    drawRectSeats(-w/2, -h/2, w, h, t.seats, color, tGuests.length);
 
     // drop shadow
     ctx.save();
@@ -4884,7 +4886,7 @@ function drawTable(t, sc, ox, oy) {
     }
 
     // Capacity bar at bottom of rect table
-    const pct = t.seats > 0 ? t.guests.length / t.seats : 0;
+    const pct = t.seats > 0 ? tGuests.length / t.seats : 0;
     const capColor = pct >= 0.85 ? '#ef4444' : pct >= 0.5 ? '#f59e0b' : '#10b981';
     const barH = 5;
     ctx.fillStyle = 'rgba(0,0,0,0.1)';
@@ -4904,7 +4906,7 @@ function drawTable(t, sc, ox, oy) {
       ctx.fillStyle = 'rgba(255,255,255,0.9)';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(t.guests.length + '/' + (t.seats || '?'), 0, fs * 0.75);
+      ctx.fillText(tGuests.length + '/' + (t.seats || '?'), 0, fs * 0.75);
     }
     if (t.note && t.note.trim()) {
       ctx.fillStyle = '#c9a96e';
@@ -7194,7 +7196,7 @@ function loadState() {
     Object.assign(S, {
       venue:      data.venue      || S.venue,
       event:      data.event      || S.event,
-      tables:     data.tables     || [],
+      tables:     (data.tables || []).map(t => ({ ...t, guests: t.guests || [] })),
       elems:      data.elems      || [],
       guests:     data.guests     || [],
       nextTid:    data.nextTid    || 1,
@@ -7877,7 +7879,8 @@ function openChartById(id) {
     Object.assign(S, {
       venue: d.venue || defaultVenue,
       event: d.event || { name: chart.name, hosts: '', date: '', headcount: '' },
-      tables: d.tables || [], elems: d.elems || [], guests: d.guests || [],
+      tables: (d.tables || []).map(t => ({ ...t, guests: t.guests || [] })),
+      elems: d.elems || [], guests: d.guests || [],
       nextTid: d.nextTid || 1, nextEid: d.nextEid || 1, nextGid: d.nextGid || 1,
       venueRot: d.venueRot || 0, venueShape: d.venueShape || null,
       bgScale: d.bgScale ?? 1, bgOffX: d.bgOffX || 0, bgOffY: d.bgOffY || 0,
