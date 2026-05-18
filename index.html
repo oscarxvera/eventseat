@@ -4703,62 +4703,68 @@ function drawDimLabels(ox, oy, VW, VH) {
 }
 
 function drawElem(e, sc, ox, oy) {
-  const x = ox + e.x * sc;
-  const y = oy + e.y * sc;
-  const w = e.w * sc;
-  const h = e.h * sc;
+  const x     = ox + e.x * sc;
+  const y     = oy + e.y * sc;
+  const w     = (e.w || 4) * sc;
+  const h     = (e.h || 4) * sc;
+  const label = e.label || '';
+  const color = (e.color && e.color[0] === '#' && e.color.length >= 7) ? e.color : '#334155';
   const isSel = S.sel?.kind === 'elem' && S.sel?.id === e.id;
 
   ctx.save();
+  try {
+    // drop shadow
+    ctx.shadowColor = 'rgba(0,0,0,0.28)';
+    ctx.shadowBlur  = 10;
+    ctx.shadowOffsetY = 3;
+    rrect(x, y, w, h, 8);
+    ctx.fillStyle = 'rgba(0,0,0,0.01)';
+    ctx.fill();
+    ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
 
-  // drop shadow
-  ctx.shadowColor = 'rgba(0,0,0,0.28)';
-  ctx.shadowBlur  = 10;
-  ctx.shadowOffsetY = 3;
-  rrect(x, y, w, h, 8);
-  ctx.fillStyle = 'rgba(0,0,0,0.01)';
-  ctx.fill();
-  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+    // gradient fill
+    const grad = ctx.createLinearGradient(x, y, x, y + h);
+    grad.addColorStop(0, lighten(color, 30) + 'dd');
+    grad.addColorStop(1, color + 'cc');
+    rrect(x, y, w, h, 8);
+    ctx.fillStyle = grad;
+    ctx.fill();
 
-  // gradient fill
-  const grad = ctx.createLinearGradient(x, y, x, y + h);
-  grad.addColorStop(0, lighten(e.color, 30) + 'dd');
-  grad.addColorStop(1, e.color + 'cc');
-  rrect(x, y, w, h, 8);
-  ctx.fillStyle = grad;
-  ctx.fill();
+    // inner highlight strip
+    if (w > 16 && h * 0.38 > 4) {
+      rrect(x + 2, y + 2, w - 4, h * 0.38, 4);
+      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      ctx.fill();
+    }
 
-  // inner highlight strip
-  rrect(x + 2, y + 2, w - 4, h * 0.38, 6);
-  ctx.fillStyle = 'rgba(255,255,255,0.15)';
-  ctx.fill();
+    // selection glow + border
+    if (isSel) { ctx.shadowColor = '#f59e0b'; ctx.shadowBlur = 18; }
+    rrect(x, y, w, h, 8);
+    ctx.strokeStyle = isSel ? '#f59e0b' : darken(color, 25);
+    ctx.lineWidth   = isSel ? 2.5 : 1.5;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
 
-  // selection glow + border
-  if (isSel) { ctx.shadowColor = '#f59e0b'; ctx.shadowBlur = 18; }
-  rrect(x, y, w, h, 8);
-  ctx.strokeStyle = isSel ? '#f59e0b' : darken(e.color, 25);
-  ctx.lineWidth   = isSel ? 2.5 : 1.5;
-  ctx.stroke();
-  ctx.shadowBlur = 0;
+    // label
+    const labelLen = label.length || 1;
+    const fs = Math.max(9, Math.min(15, w / (labelLen * 0.65)));
+    ctx.fillStyle    = 'white';
+    ctx.font         = `bold ${fs}px 'Inter', Segoe UI`;
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor  = 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur   = 4;
+    ctx.fillText(label, x + w / 2, y + h / 2 - (w > 60 && h > 36 ? 7 : 0));
+    ctx.shadowBlur = 0;
 
-  // label
-  const fs = Math.max(9, Math.min(15, w / (e.label.length * 0.65)));
-  ctx.fillStyle    = 'white';
-  ctx.font         = `bold ${fs}px 'Inter', Segoe UI`;
-  ctx.textAlign    = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.shadowColor  = 'rgba(0,0,0,0.5)';
-  ctx.shadowBlur   = 4;
-  ctx.fillText(e.label, x + w / 2, y + h / 2 - (w > 60 && h > 36 ? 7 : 0));
-  ctx.shadowBlur = 0;
-
-  if (w > 60 && h > 36) {
-    ctx.font      = `10px 'Inter', Segoe UI`;
-    ctx.fillStyle = 'rgba(255,255,255,0.75)';
-    ctx.fillText(`${e.w} × ${e.h} ft`, x + w / 2, y + h / 2 + 9);
+    if (w > 60 && h > 36) {
+      ctx.font      = `10px 'Inter', Segoe UI`;
+      ctx.fillStyle = 'rgba(255,255,255,0.75)';
+      ctx.fillText(`${e.w} × ${e.h} ft`, x + w / 2, y + h / 2 + 9);
+    }
+  } finally {
+    ctx.restore();
   }
-
-  ctx.restore();
 }
 
 function labelPill(x, y, text, fs) {
@@ -4786,8 +4792,8 @@ function drawTable(t, sc, ox, oy) {
   const tGuests = t.guests || [];
   const tNum = t.num || t.id || 1;
   const color = t.color || TABLE_COLORS[(tNum - 1) % TABLE_COLORS.length];
-
   ctx.save();
+  try {
 
   if (t.type === 'round') {
     const r = (t.diam / 2) * sc;
@@ -4955,7 +4961,9 @@ function drawTable(t, sc, ox, oy) {
     ctx.restore();
   }
 
-  ctx.restore();
+  } finally {
+    ctx.restore();
+  }
 }
 
 function drawRoundSeats(cx, cy, tableR, seats, color, occupied) {
