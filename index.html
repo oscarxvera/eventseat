@@ -2028,6 +2028,9 @@ header { animation: headerDrop 0.5s cubic-bezier(0.22,1,0.36,1) both; }
   .bt-preset-sub { display: none; }
   .bt-label { display: none; }
   .bt-custom-btn { font-size: 10px !important; padding: 5px 8px !important; }
+  .bt-objects-btn { min-width: 56px !important; padding: 4px 7px !important; height: 46px !important; }
+  #objects-popup { min-width: 280px !important; left: 8px !important; right: 8px !important; transform: none !important; }
+  .obj-popup-grid { grid-template-columns: repeat(3, 1fr) !important; }
 
   /* Canvas: fill remaining space fully */
   #canvas-wrap { border: none; }
@@ -2462,6 +2465,41 @@ body.dark-mode .vpbtn:hover { border-color: #c9a96e; color: white; background: #
   transition: all 0.15s;
 }
 .bt-custom-btn:hover { background: rgba(201,169,110,0.12); }
+.bt-objects-btn {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; padding: 6px 14px; border: 1px solid #ddd8ce; border-radius: 9px;
+  background: white; cursor: pointer; transition: all 0.15s; min-width: 70px; height: 52px;
+  font-family: 'Inter', sans-serif;
+}
+.bt-objects-btn:hover { border-color: #c9a96e; background: #fffef8; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.bt-objects-btn.active { border-color: #0f1e3d; background: #e8edf5; }
+#objects-popup {
+  display: none; position: fixed; bottom: 62px; left: 50%; transform: translateX(-50%);
+  background: white; border: 1px solid #e2ddd4; border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08);
+  padding: 14px 16px 12px; z-index: 600; min-width: 340px;
+}
+#objects-popup.open { display: block; }
+.obj-popup-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #a07840; margin-bottom: 10px; }
+.obj-popup-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+}
+.obj-item {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 8px 4px; border: 1px solid #e9e4db; border-radius: 8px; background: #faf8f3;
+  cursor: pointer; transition: all 0.15s; font-family: 'Inter', sans-serif;
+}
+.obj-item span:first-child { font-size: 20px; line-height: 1; }
+.obj-item span:last-child { font-size: 10px; font-weight: 600; color: #475569; text-align: center; white-space: nowrap; }
+.obj-item:hover { border-color: #c9a96e; background: #fffef8; transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+.obj-item-custom { border-style: dashed; border-color: #c9a96e; background: rgba(201,169,110,0.05); }
+.obj-item-custom span:last-child { color: #a07840; }
+body.dark-mode #objects-popup { background: #1e2438; border-color: #2a3050; }
+body.dark-mode .obj-item { background: #252d42; border-color: #2a3050; }
+body.dark-mode .obj-item span:last-child { color: #cbd5e1; }
+body.dark-mode .obj-item:hover { background: #2d3650; border-color: #c9a96e; }
+body.dark-mode .bt-objects-btn { background: #1e2438; border-color: #2a3050; }
+body.dark-mode .bt-objects-btn:hover { background: #252d42; border-color: #c9a96e; }
 
 /* Custom table size panel (inline in toolbar) */
 #custom-size-wrap {
@@ -5086,14 +5124,14 @@ function darken(hex, amt = 40) {
   const r = Math.max(0, (n >> 16) - amt);
   const g = Math.max(0, ((n >> 8) & 0xff) - amt);
   const b = Math.max(0, (n & 0xff) - amt);
-  return `rgb(${r},${g},${b})`;
+  return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
 }
 function lighten(hex, amt = 40) {
   const n = parseInt(hex.slice(1), 16);
   const r = Math.min(255, (n >> 16) + amt);
   const g = Math.min(255, ((n >> 8) & 0xff) + amt);
   const b = Math.min(255, (n & 0xff) + amt);
-  return `rgb(${r},${g},${b})`;
+  return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
 }
 
 // ─────────────────────────────────────────────
@@ -5723,6 +5761,29 @@ function startElem(type) {
     return;
   }
   enterPlace('elem', { ...ELEM_DEFS[type] });
+}
+
+function toggleObjectsPopup() {
+  const popup = document.getElementById('objects-popup');
+  const btn   = document.getElementById('bt-objects-btn');
+  const arrow = document.getElementById('bt-objects-arrow');
+  const open  = popup.classList.toggle('open');
+  btn.classList.toggle('active', open);
+  if (arrow) arrow.textContent = open ? '▼' : '▼';
+}
+
+function closeObjectsPopup() {
+  const popup = document.getElementById('objects-popup');
+  const btn   = document.getElementById('bt-objects-btn');
+  const arrow = document.getElementById('bt-objects-arrow');
+  popup.classList.remove('open');
+  btn.classList.remove('active');
+  if (arrow) arrow.textContent = '▼';
+}
+
+function pickElem(type) {
+  closeObjectsPopup();
+  startElem(type);
 }
 
 function confirmCustom() {
@@ -9322,6 +9383,15 @@ setTimeout(function() {
     var landing = document.getElementById('landing-overlay');
     if (landing) { landing.style.display = 'flex'; landing.style.opacity = '1'; }
     console.warn('EventSeat: safety net triggered — auth may have stalled');
+
+// Close objects popup when clicking outside of it
+document.addEventListener('click', function(e) {
+  const popup = document.getElementById('objects-popup');
+  const btn   = document.getElementById('bt-objects-btn');
+  if (popup && popup.classList.contains('open') && !popup.contains(e.target) && !btn.contains(e.target)) {
+    closeObjectsPopup();
+  }
+});
   }
 }, 6000);
 </script>
@@ -9370,70 +9440,34 @@ setTimeout(function() {
     <input class="csw-num" type="text" id="csw-name" value="" placeholder="e.g. Head Table" title="Optional table name" style="width:90px">
     <button class="csw-place-btn" onclick="placeCustomTable()">Place Table</button>
   </div>
-  <!-- Room Objects -->
-  <div class="bt-group">
+  <!-- Room Objects — compact trigger + popup -->
+  <div class="bt-group" style="position:relative">
     <span class="bt-label">Objects</span>
-    <button class="bt-preset" onclick="startElem('dance')">
-      <span class="bt-preset-icon">💃</span>
-      <span class="bt-preset-name">Dance Floor</span>
-      <span class="bt-preset-sub">16×12 ft</span>
+    <button class="bt-objects-btn" id="bt-objects-btn" onclick="toggleObjectsPopup()" title="Room objects">
+      <span style="font-size:16px">🏛</span>
+      <span style="font-size:10px;font-weight:700;color:#475569">Objects</span>
+      <span id="bt-objects-arrow" style="font-size:9px;color:#94a3b8;margin-left:1px">▼</span>
     </button>
-    <button class="bt-preset" onclick="startElem('stage')">
-      <span class="bt-preset-icon">🎤</span>
-      <span class="bt-preset-name">Stage</span>
-      <span class="bt-preset-sub">20×10 ft</span>
-    </button>
-    <button class="bt-preset" onclick="startElem('buffet')">
-      <span class="bt-preset-icon">🍽</span>
-      <span class="bt-preset-name">Buffet</span>
-      <span class="bt-preset-sub">14×4 ft</span>
-    </button>
-    <button class="bt-preset" onclick="startElem('bar')">
-      <span class="bt-preset-icon">🍸</span>
-      <span class="bt-preset-name">Bar</span>
-      <span class="bt-preset-sub">12×4 ft</span>
-    </button>
-    <button class="bt-preset" onclick="startElem('dj')">
-      <span class="bt-preset-icon">🎧</span>
-      <span class="bt-preset-name">DJ Booth</span>
-      <span class="bt-preset-sub">8×6 ft</span>
-    </button>
-    <button class="bt-preset" onclick="startElem('bathroom')">
-      <span class="bt-preset-icon">🚻</span>
-      <span class="bt-preset-name">Restrooms</span>
-      <span class="bt-preset-sub">8×6 ft</span>
-    </button>
-    <button class="bt-preset" onclick="startElem('photo')">
-      <span class="bt-preset-icon">📸</span>
-      <span class="bt-preset-name">Photo Booth</span>
-      <span class="bt-preset-sub">6×6 ft</span>
-    </button>
-    <button class="bt-preset" onclick="startElem('cake')">
-      <span class="bt-preset-icon">🎂</span>
-      <span class="bt-preset-name">Cake Table</span>
-      <span class="bt-preset-sub">5×3 ft</span>
-    </button>
-    <button class="bt-preset" onclick="startElem('gift')">
-      <span class="bt-preset-icon">🎁</span>
-      <span class="bt-preset-name">Gift Table</span>
-      <span class="bt-preset-sub">6×3 ft</span>
-    </button>
-    <button class="bt-preset" onclick="startElem('entrance')">
-      <span class="bt-preset-icon">🚪</span>
-      <span class="bt-preset-name">Entrance</span>
-      <span class="bt-preset-sub">8×4 ft</span>
-    </button>
-    <button class="bt-preset" onclick="startElem('food')">
-      <span class="bt-preset-icon">🥘</span>
-      <span class="bt-preset-name">Food Station</span>
-      <span class="bt-preset-sub">10×4 ft</span>
-    </button>
-    <button class="bt-preset" onclick="startElem('coat')">
-      <span class="bt-preset-icon">🧥</span>
-      <span class="bt-preset-name">Coat Check</span>
-      <span class="bt-preset-sub">8×4 ft</span>
-    </button>
-    <button class="bt-custom-btn" onclick="startElem('custom')">+ Custom</button>
+  </div>
+
+  <!-- Objects popup (sits above toolbar) -->
+  <div id="objects-popup">
+    <div class="obj-popup-title">Room Objects — click to place</div>
+    <div class="obj-popup-grid">
+      <button class="obj-item" onclick="pickElem('dance')"><span>💃</span><span>Dance Floor</span></button>
+      <button class="obj-item" onclick="pickElem('stage')"><span>🎤</span><span>Stage</span></button>
+      <button class="obj-item" onclick="pickElem('buffet')"><span>🍽</span><span>Buffet</span></button>
+      <button class="obj-item" onclick="pickElem('bar')"><span>🍸</span><span>Bar</span></button>
+      <button class="obj-item" onclick="pickElem('dj')"><span>🎧</span><span>DJ Booth</span></button>
+      <button class="obj-item" onclick="pickElem('bathroom')"><span>🚻</span><span>Restrooms</span></button>
+      <button class="obj-item" onclick="pickElem('photo')"><span>📸</span><span>Photo Booth</span></button>
+      <button class="obj-item" onclick="pickElem('cake')"><span>🎂</span><span>Cake Table</span></button>
+      <button class="obj-item" onclick="pickElem('gift')"><span>🎁</span><span>Gift Table</span></button>
+      <button class="obj-item" onclick="pickElem('entrance')"><span>🚪</span><span>Entrance</span></button>
+      <button class="obj-item" onclick="pickElem('food')"><span>🥘</span><span>Food Station</span></button>
+      <button class="obj-item" onclick="pickElem('coat')"><span>🧥</span><span>Coat Check</span></button>
+      <button class="obj-item obj-item-custom" onclick="pickElem('custom')"><span>✏️</span><span>Custom…</span></button>
+    </div>
   </div>
 
   <!-- View Controls -->
